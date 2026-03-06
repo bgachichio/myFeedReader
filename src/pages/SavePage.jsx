@@ -12,14 +12,31 @@ function extractUrl(str) {
   return m ? m[0].replace(/[.)]+$/, '') : ''  // strip trailing punctuation
 }
 
-// Get a fresh session token, retrying up to 3x with backoff
-// Needed because on Android cold PWA start, localStorage isn't loaded yet
-async function getFreshToken(maxRetries = 3) {
+// Get a guaranteed-fresh session token for API calls.
+// On Android cold PWA start (share sheet), IndexedDB hasn't loaded yet so
+// getSession() returns null on first call. We retry with backoff.
+// IMPORTANT: we call refreshSession() on the last attempt to force-renew
+// an expired token — an expired token causes 401 inside the edge function.
+async function getFreshToken(maxRetries = 5) {
   for (let i = 0; i < maxRetries; i++) {
+    // On final retry, force-refresh the session to renew any expired token
+    if (i === maxRetries - 1) {
+      const { data } = await supabase.auth.refreshSession()
+      if (data?.session?.access_token) return data.session.access_token
+    }
     const { data: { session } } = await supabase.auth.getSession()
-    if (session?.access_token) return session.access_token
+    if (session?.access_token) {
+      // Double-check the token isn't expired
+      const exp = session.expires_at  // unix timestamp in seconds
+      if (!exp || exp * 1000 > Date.now() + 5000) {
+        return session.access_token
+      }
+      // Token expires in < 5s — force refresh
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed?.session?.access_token) return refreshed.session.access_token
+    }
     if (i < maxRetries - 1) {
-      await new Promise(r => setTimeout(r, 600 * (i + 1)))  // 600ms, 1200ms
+      await new Promise(r => setTimeout(r, 800 * (i + 1)))  // 800ms, 1600ms, 2400ms, 3200ms
     }
   }
   return null
@@ -71,7 +88,8 @@ export default function SavePage() {
       return
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
 
     // 10s timeout — edge function cold start can take 2-3s, enrichment up to 5s
     const controller = new AbortController()
@@ -82,6 +100,7 @@ export default function SavePage() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'apikey': supabaseAnon,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -96,6 +115,12 @@ export default function SavePage() {
       clearTimeout(timer)
 
       if (!res.ok) {
+        // 401 specifically = auth token was rejected by the server
+        // This usually means the session expired between getFreshToken and the request
+        if (res.status === 401) {
+          setPhase('auth-needed')
+          return
+        }
         const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
         throw new Error(errBody.error || `Server error ${res.status}`)
       }
