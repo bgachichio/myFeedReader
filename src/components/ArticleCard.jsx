@@ -195,7 +195,7 @@ export default function ArticleCard({ article, onUpdate, onUpgrade = null, selec
 
             {/* Preview (always shown) */}
             {article.description && (
-              <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+              <p className="text-stone-500 dark:text-stone-400 leading-relaxed" style={{ fontSize: 'calc(var(--reader-font-size, 16px) - 2px)' }}>
                 {article.description}{article.description.length >= 278 ? '...' : ''}
               </p>
             )}

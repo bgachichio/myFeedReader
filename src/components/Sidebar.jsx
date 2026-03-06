@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Rss, LayoutDashboard, Bookmark, Plus, LogOut, BookOpen, BookMarked, BarChart2, Search, Sun, Moon, Menu, X, Keyboard, Settings, Compass, Mail } from 'lucide-react'
+import { Rss, LayoutDashboard, Bookmark, Plus, LogOut, BookOpen, BookMarked, BarChart2, Search, Sun, Moon, Menu, X, Settings, Compass, Mail } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useUnread } from '../contexts/UnreadContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -8,7 +8,7 @@ import { useSettings } from '../contexts/SettingsContext'
 import { getFeeds } from '../lib/feedsService'
 import Logo from './Logo'
 
-export default function Sidebar({ onAddFeed, onDiscover, onNewsletter, onSearch, onHelp, mobileOpen, onMobileClose }) {
+export default function Sidebar({ onAddFeed, onDiscover, onNewsletter, onSearch, mobileOpen, onMobileClose }) {
   const { user, signOut } = useAuth()
   const { unreadCount, refreshUnreadCount } = useUnread()
   const { dark, toggleTheme } = useTheme()
@@ -96,12 +96,6 @@ export default function Sidebar({ onAddFeed, onDiscover, onNewsletter, onSearch,
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
           {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           {dark ? 'Light mode' : 'Dark mode'}
-        </button>
-        <button onClick={onHelp}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
-          <Keyboard className="w-4 h-4" />
-          <span className="flex-1 text-left">Shortcuts</span>
-          <kbd className="text-xs bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-1.5 py-0.5 rounded font-mono text-stone-500 dark:text-stone-400">?</kbd>
         </button>
         <div className="px-3 py-1">
           <p className="text-xs font-medium text-stone-600 dark:text-stone-400 truncate">

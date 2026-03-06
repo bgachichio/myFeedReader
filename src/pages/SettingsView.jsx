@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { User, Lock, Type, Calendar, Clock, Layout, Trash2, Check, Eye, EyeOff, AlertTriangle, Activity, CreditCard, Zap, ExternalLink } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useSettings, FONTS, DATE_FORMATS, TIME_FORMATS, TIMEZONES } from '../contexts/SettingsContext'
+import { useSettings, FONTS, FONT_SIZES, DATE_FORMATS, TIME_FORMATS, TIMEZONES } from '../contexts/SettingsContext'
 import { supabase } from '../lib/supabase'
 import { usePlan } from '../contexts/PlanContext'
 import PaywallModal from '../components/PaywallModal'
@@ -75,7 +75,7 @@ function DiagnosticPanel() {
       // Step 2: try to read profile row
       const { data, error: readErr } = await supabase
         .from('profiles')
-        .select('id, display_name, font_id, date_format, time_format, timezone, compact_mode, show_reading_time, show_author, articles_per_page, email_notifications, updated_at')
+        .select('id, display_name, font_id, font_size, date_format, time_format, timezone, compact_mode, show_reading_time, show_author, articles_per_page, email_notifications, updated_at')
         .eq('id', user.id)
         .maybeSingle()
       if (readErr) throw new Error(`SELECT failed: ${readErr.message} (code: ${readErr.code})`)
@@ -171,6 +171,7 @@ function DiagnosticPanel() {
               ['Show author',        String(rowData.show_author         ?? true)],
               ['Articles per page',  String(rowData.articles_per_page   || 20)],
               ['Email notifs',       String(rowData.email_notifications ?? false)],
+              ['Font size',          rowData.font_size || 'md'],
               ['Last saved',         rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : 'never'],
             ].map(([k, v]) => (
               <div key={k} className="bg-stone-50 dark:bg-stone-800 rounded-lg p-2">
@@ -310,13 +311,14 @@ function AppearanceSection() {
   const [msg, setMsg] = useState(null)
   const [local, setLocal] = useState({
     fontId: settings.fontId,
+    fontSize: settings.fontSize,
     compactMode: settings.compactMode,
     showReadingTime: settings.showReadingTime,
     showAuthor: settings.showAuthor,
   })
   useEffect(() => {
-    setLocal({ fontId: settings.fontId, compactMode: settings.compactMode, showReadingTime: settings.showReadingTime, showAuthor: settings.showAuthor })
-  }, [settings.fontId, settings.compactMode, settings.showReadingTime, settings.showAuthor])
+    setLocal({ fontId: settings.fontId, fontSize: settings.fontSize, compactMode: settings.compactMode, showReadingTime: settings.showReadingTime, showAuthor: settings.showAuthor })
+  }, [settings.fontId, settings.fontSize, settings.compactMode, settings.showReadingTime, settings.showAuthor])
 
   const handleSave = async () => {
     setLoading(true); setMsg(null)
@@ -348,6 +350,25 @@ function AppearanceSection() {
           ))}
         </div>
       </Field>
+
+      <div className="border-t border-stone-50 dark:border-stone-800 pt-4">
+        <Field label="Font size" hint="Applies to article content and feed cards.">
+          <div className="grid grid-cols-4 gap-2">
+            {FONT_SIZES.map(size => (
+              <button key={size.id} onClick={() => setLocal(p => ({ ...p, fontSize: size.id }))}
+                className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border transition-colors ${
+                  local.fontSize === size.id
+                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30'
+                    : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600'
+                }`}>
+                <span style={{ fontSize: size.cssSize, lineHeight: 1 }} className="font-medium text-stone-800 dark:text-stone-200">Aa</span>
+                <span className="text-xs text-stone-500 dark:text-stone-400">{size.label}</span>
+                {local.fontSize === size.id && <Check className="w-3 h-3 text-brand-600 dark:text-brand-400" />}
+              </button>
+            ))}
+          </div>
+        </Field>
+      </div>
 
       <div className="border-t border-stone-50 dark:border-stone-800 pt-4 space-y-3">
         <p className="text-xs font-medium text-stone-600 dark:text-stone-400">Article display</p>

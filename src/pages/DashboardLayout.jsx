@@ -4,7 +4,6 @@ import { Menu, Search } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AddFeedModal from '../components/AddFeedModal'
 import SearchModal from '../components/SearchModal'
-import KeyboardShortcutsModal from '../components/KeyboardShortcutsModal'
 import InstallPrompt from '../components/InstallPrompt'
 import FeedDiscoveryModal from '../components/FeedDiscoveryModal'
 import NewsletterModal from '../components/NewsletterModal'
@@ -12,7 +11,6 @@ import PaywallModal from '../components/PaywallModal'
 import { UnreadProvider, useUnread } from '../contexts/UnreadContext'
 import { PlanProvider, usePlan, GATED_FEATURES } from '../contexts/PlanContext'
 import { useAuth } from '../contexts/AuthContext'
-import { useKeyboardShortcuts } from '../lib/useKeyboardShortcuts'
 import { getFeeds, upsertArticles, prefetchReadingListContent } from '../lib/feedsService'
 import { supabase } from '../lib/supabase'
 
@@ -27,7 +25,6 @@ function DashboardContent() {
   const [showDiscover, setShowDiscover]     = useState(false)
   const [showNewsletter, setShowNewsletter] = useState(false)
   const [showSearch, setShowSearch]         = useState(false)
-  const [showHelp, setShowHelp]             = useState(false)
   const [paywallFeature, setPaywallFeature] = useState(null)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [refreshKey, setRefreshKey]         = useState(0)
@@ -74,8 +71,6 @@ function DashboardContent() {
   }, [user?.id])
 
   const openSearch = useCallback(() => setShowSearch(true), [])
-  const openHelp   = useCallback(() => setShowHelp(true), [])
-  useKeyboardShortcuts({ onSearch: openSearch, onHelp: openHelp })
 
   // Auto-refresh feeds on login
   useEffect(() => {
@@ -157,7 +152,6 @@ function DashboardContent() {
         onDiscover={() => setShowDiscover(true)}
         onNewsletter={handleNewsletterClick}
         onSearch={openSearch}
-        onHelp={openHelp}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
         feedCount={feedCount}
@@ -216,7 +210,6 @@ function DashboardContent() {
       {showDiscover   && <FeedDiscoveryModal onClose={() => setShowDiscover(false)} onAdded={() => { setShowDiscover(false); setRefreshKey(k => k + 1); refreshUnreadCount() }} />}
       {showAdd        && <AddFeedModal onClose={() => setShowAdd(false)} onAdded={handleAdded} />}
       {showSearch     && <SearchModal onClose={() => setShowSearch(false)} />}
-      {showHelp       && <KeyboardShortcutsModal onClose={() => setShowHelp(false)} />}
       {showNewsletter && <NewsletterModal onClose={() => setShowNewsletter(false)} onAdded={() => { setShowNewsletter(false); setRefreshKey(k => k + 1); refreshUnreadCount() }} />}
       {paywallFeature && <PaywallModal feature={paywallFeature} onClose={() => setPaywallFeature(null)} />}
     </div>

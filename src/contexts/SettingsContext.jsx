@@ -10,6 +10,13 @@ export const FONTS = [
   { id: 'merriweather', label: 'Merriweather',stack: "'Merriweather', serif",               googleParam: 'Merriweather:wght@300;400;700' },
 ]
 
+export const FONT_SIZES = [
+  { id: 'sm',   label: 'Small',   cssSize: '14px', previewClass: 'text-sm'  },
+  { id: 'md',   label: 'Medium',  cssSize: '16px', previewClass: 'text-base' },
+  { id: 'lg',   label: 'Large',   cssSize: '18px', previewClass: 'text-lg'  },
+  { id: 'xl',   label: 'X-Large', cssSize: '20px', previewClass: 'text-xl'  },
+]
+
 export const DATE_FORMATS = [
   { id: 'relative', label: 'Relative',     example: '2 hours ago' },
   { id: 'dmy',      label: 'DD/MM/YYYY',   example: '26/02/2026' },
@@ -42,6 +49,7 @@ const DEFAULT_SETTINGS = {
   showAuthor: true,
   articlesPerPage: 20,
   emailNotifications: false,
+  fontSize: 'md',
 }
 
 // ── localStorage helpers ──────────────────────────────────────────
@@ -77,6 +85,7 @@ function dbToSettings(data) {
     showAuthor:         data.show_author         ?? true,
     articlesPerPage:    data.articles_per_page   || 20,
     emailNotifications: data.email_notifications ?? false,
+    fontSize:           data.font_size            || 'md',
   }
 }
 
@@ -94,6 +103,7 @@ function settingsToDb(s, userId) {
     show_author:         s.showAuthor,
     articles_per_page:   s.articlesPerPage,
     email_notifications: s.emailNotifications,
+    font_size:           s.fontSize,
     updated_at:          new Date().toISOString(),
   }
 }
@@ -166,7 +176,7 @@ export function SettingsProvider({ children }) {
     })()
   }, [user?.id])
 
-  // ── Apply font ────────────────────────────────────────────────
+  // ── Apply font family ─────────────────────────────────────────
   useEffect(() => {
     const font = FONTS.find(f => f.id === settings.fontId) || FONTS[0]
     if (font.googleParam && !document.getElementById(`gf-${font.id}`)) {
@@ -178,6 +188,14 @@ export function SettingsProvider({ children }) {
     }
     document.body.style.fontFamily = font.stack
   }, [settings.fontId])
+
+  // ── Apply font size via CSS custom property ───────────────────
+  useEffect(() => {
+    const size = FONT_SIZES.find(s => s.id === settings.fontSize) || FONT_SIZES[1]
+    document.documentElement.style.setProperty('--reader-font-size', size.cssSize)
+    // Also set a data attribute so CSS can target it
+    document.documentElement.setAttribute('data-font-size', settings.fontSize)
+  }, [settings.fontSize])
 
   // ── Save ──────────────────────────────────────────────────────
   const updateSettings = useCallback(async (updates) => {

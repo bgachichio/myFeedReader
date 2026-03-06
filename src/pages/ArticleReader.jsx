@@ -241,8 +241,8 @@ export default function ArticleReader() {
         )}
 
         {!fetchingText && fullText && (
-          <div className="prose-reader">
-            <p className="text-base text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-line">
+          <div className="prose-reader" style={{ fontSize: 'var(--reader-font-size, 16px)', lineHeight: '1.75' }}>
+            <p className="text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-line" style={{ fontSize: 'inherit' }}>
               {fullText}
             </p>
           </div>
@@ -250,7 +250,7 @@ export default function ArticleReader() {
 
         {!fetchingText && !fullText && article.description && (
           <div>
-            <p className="text-base text-stone-700 dark:text-stone-300 leading-relaxed">
+            <p className="text-stone-700 dark:text-stone-300 leading-relaxed" style={{ fontSize: 'inherit' }}>
               {article.description}
             </p>
             {fetchFailed && (
