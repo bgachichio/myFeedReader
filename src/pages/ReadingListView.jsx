@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookMarked, ExternalLink, Check, Trash2, Clock, RefreshCw, Wifi, WifiOff, Inbox } from 'lucide-react'
+import { BookMarked, ExternalLink, Check, Trash2, Clock, RefreshCw, Wifi, WifiOff, Upload } from 'lucide-react'
+import ImportLinksModal from '../components/ImportLinksModal'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { toggleReadLater, prefetchReadingListContent, readingListSignal } from '../lib/feedsService'
@@ -106,6 +107,15 @@ function ReadingCard({ item, onRemove, onMarkRead }) {
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+      {showImport && (
+        <ImportLinksModal
+          onClose={() => setShowImport(false)}
+          onImportComplete={() => {
+            cache.ts = 0
+            load(true)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -169,6 +179,7 @@ export default function ReadingListView() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('unread')
   const [sortOrder, setSortOrder] = useState('newest')
+  const [showImport, setShowImport] = useState(false)
   const loadingRef = useRef(false)
 
   const load = useCallback(async (force = false) => {
@@ -319,6 +330,11 @@ export default function ReadingListView() {
             title="Refresh">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          <button onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            title="Import links">
+            <Upload className="w-3.5 h-3.5" />Import
+          </button>
           {/* Sort */}
           <div className="flex items-center bg-stone-100 dark:bg-stone-800 rounded-full p-0.5 gap-0.5">
             {SORT_OPTIONS.map(({ id, label }) => (
@@ -408,6 +424,15 @@ export default function ReadingListView() {
             />
           ))}
         </div>
+      )}
+      {showImport && (
+        <ImportLinksModal
+          onClose={() => setShowImport(false)}
+          onImportComplete={() => {
+            cache.ts = 0
+            load(true)
+          }}
+        />
       )}
     </div>
   )
