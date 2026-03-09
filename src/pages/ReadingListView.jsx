@@ -107,15 +107,6 @@ function ReadingCard({ item, onRemove, onMarkRead }) {
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
-      {showImport && (
-        <ImportLinksModal
-          onClose={() => setShowImport(false)}
-          onImportComplete={() => {
-            cache.ts = 0
-            load(true)
-          }}
-        />
-      )}
     </div>
   )
 }
