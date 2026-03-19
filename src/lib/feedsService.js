@@ -301,3 +301,62 @@ export async function prefetchReadingListContent(userId) {
     }
   } catch {} // Entire function is non-fatal
 }
+
+// ── Storage management: prune old read articles ───────────────────
+// Deletes articles that are:
+//   - older than PRUNE_DAYS days
+//   - marked as read (is_read = true)
+//   - NOT bookmarked, NOT saved for later
+// Keeps: unread, bookmarked, and saved-for-later articles indefinitely.
+// Run silently after every upsertArticles call — never blocks the UI.
+const PRUNE_DAYS = 30
+
+export async function pruneOldArticles(userId) {
+  try {
+    const cutoff = new Date(Date.now() - PRUNE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const { error, count } = await supabase
+      .from('articles')
+      .delete({ count: 'exact' })
+      .eq('user_id', userId)
+      .eq('is_read', true)
+      .eq('is_bookmarked', false)
+      .eq('is_read_later', false)
+      .lt('pub_date', cutoff)
+    if (error) console.warn('[pruneOldArticles]', error.message)
+    else if (count > 0) console.log(`[pruneOldArticles] pruned ${count} old articles`)
+  } catch (e) {
+    console.warn('[pruneOldArticles] failed silently:', e.message)
+  }
+}
+
+// ── Storage usage estimate ────────────────────────────────────────
+// Returns approximate article count and estimated storage used.
+// Useful for diagnostics in SettingsView.
+export async function getStorageStats(userId) {
+  const { count: articleCount } = await supabase
+    .from('articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  const { count: savedCount } = await supabase
+    .from('saved_articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  const { count: readCount } = await supabase
+    .from('articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('is_read', true)
+    .eq('is_bookmarked', false)
+    .eq('is_read_later', false)
+
+  return {
+    articleCount: articleCount || 0,
+    savedCount: savedCount || 0,
+    prunableCount: readCount || 0,
+    // Rough estimate: avg 3KB per article row (title + description + metadata)
+    // full_content adds ~8KB when present but only for reading list items
+    estimatedKB: Math.round(((articleCount || 0) * 3 + (savedCount || 0) * 10)),
+  }
+}

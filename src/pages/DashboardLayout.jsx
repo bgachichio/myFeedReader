@@ -11,7 +11,7 @@ import PaywallModal from '../components/PaywallModal'
 import { UnreadProvider, useUnread } from '../contexts/UnreadContext'
 import { PlanProvider, usePlan, GATED_FEATURES } from '../contexts/PlanContext'
 import { useAuth } from '../contexts/AuthContext'
-import { getFeeds, upsertArticles, prefetchReadingListContent } from '../lib/feedsService'
+import { getFeeds, upsertArticles, prefetchReadingListContent, pruneOldArticles } from '../lib/feedsService'
 import { supabase } from '../lib/supabase'
 
 function DashboardContent() {
@@ -32,6 +32,8 @@ function DashboardContent() {
   const [feedCount, setFeedCount]           = useState(0)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const hasAutoRefreshed = useRef(false)
+  const lastRefreshTime  = useRef(0)
+  const REFRESH_COOLDOWN = 5 * 60 * 1000  // 5 minutes
 
   // Handle Paystack redirect back after payment
   useEffect(() => {
@@ -72,13 +74,13 @@ function DashboardContent() {
 
   const openSearch = useCallback(() => setShowSearch(true), [])
 
-  // Auto-refresh feeds on login
-  useEffect(() => {
-    if (hasAutoRefreshed.current) return
-    hasAutoRefreshed.current = true
-    const autoRefresh = async () => {
-      setAutoRefreshing(true)
-      try {
+  // Auto-refresh feeds: on login AND when user returns to tab/PWA after >5 min
+  const autoRefresh = useCallback(async () => {
+    const now = Date.now()
+    if (now - lastRefreshTime.current < REFRESH_COOLDOWN) return
+    lastRefreshTime.current = now
+    setAutoRefreshing(true)
+    try {
         const feeds = await getFeeds(user.id)
         if (!feeds.length) return
 
@@ -107,18 +109,40 @@ function DashboardContent() {
           })
         })
 
-        if (allArticles.length) await upsertArticles(allArticles)
+        if (allArticles.length) {
+          await upsertArticles(allArticles)
+          pruneOldArticles(user.id).catch(() => {})  // fire-and-forget
+        }
         await refreshUnreadCount()
         setRefreshKey(k => k + 1)
         prefetchReadingListContent(user.id).catch(() => {})
-      } catch (e) {
-        console.error('[autoRefresh]', e.message)
-      } finally {
-        setAutoRefreshing(false)
-      }
+    } catch (e) {
+      console.error('[autoRefresh]', e.message)
+    } finally {
+      setAutoRefreshing(false)
     }
-    autoRefresh()
   }, [user.id, refreshUnreadCount])
+
+  // Fire on mount (login / cold start)
+  useEffect(() => {
+    if (hasAutoRefreshed.current) return
+    hasAutoRefreshed.current = true
+    autoRefresh()
+  }, [autoRefresh])
+
+  // Re-fire when user returns to tab/PWA after being away
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') autoRefresh()
+    }
+    const handleFocus = () => autoRefresh()
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [autoRefresh])
 
   const handleAdded = () => {
     setShowAdd(false)

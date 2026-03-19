@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RefreshCw, Inbox, CheckCheck, X, CheckSquare, Square, MailOpen } from 'lucide-react'
+import { RefreshCw, Inbox, CheckCheck, X, CheckSquare, Square, MailOpen, BookMarked } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -345,17 +345,55 @@ export default function FeedView() {
       )}
 
       {!loading && articles.length === 0 && (
-        <div className="text-center py-24">
-          <div className="w-16 h-16 bg-stone-50 dark:bg-stone-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Inbox className="w-7 h-7 text-stone-300 dark:text-stone-600" />
-          </div>
-          <h3 className="font-semibold text-stone-700 dark:text-stone-300 mb-2">{emptyTitle}</h3>
-          <p className="text-sm text-stone-400 dark:text-stone-500 max-w-xs mx-auto">{emptyBody}</p>
-          {readFilter !== 'all' && (
-            <button onClick={() => handleReadFilterChange('all')}
-              className="mt-4 px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors">
-              Show all articles
-            </button>
+        <div className="text-center py-16">
+          {readFilter === 'unread' ? (
+            /* ── All caught up state ── */
+            <div className="max-w-sm mx-auto">
+              <div className="w-20 h-20 bg-brand-50 dark:bg-brand-900/30 rounded-3xl flex items-center justify-center mx-auto mb-5">
+                <CheckCheck className="w-10 h-10 text-brand-500 dark:text-brand-400" />
+              </div>
+              <h3 className="font-bold text-xl text-stone-800 dark:text-stone-100 mb-2">All caught up!</h3>
+              <p className="text-sm text-stone-400 dark:text-stone-500 mb-8 leading-relaxed">
+                You've read everything in your feed.<br />More articles will appear after the next refresh.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => handleReadFilterChange('all')}
+                  className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors group">
+                  <Inbox className="w-5 h-5 text-stone-400 group-hover:text-brand-500 transition-colors" />
+                  <span className="text-xs font-medium text-stone-600 dark:text-stone-400 group-hover:text-brand-600 dark:group-hover:text-brand-400">All articles</span>
+                </button>
+                <a href="/dashboard/digest"
+                  className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors group">
+                  <MailOpen className="w-5 h-5 text-stone-400 group-hover:text-brand-500 transition-colors" />
+                  <span className="text-xs font-medium text-stone-600 dark:text-stone-400 group-hover:text-brand-600 dark:group-hover:text-brand-400">Daily Digest</span>
+                </a>
+                <a href="/dashboard/reading-list"
+                  className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors group">
+                  <BookMarked className="w-5 h-5 text-stone-400 group-hover:text-brand-500 transition-colors" />
+                  <span className="text-xs font-medium text-stone-600 dark:text-stone-400 group-hover:text-brand-600 dark:group-hover:text-brand-400">Reading List</span>
+                </a>
+                <button onClick={refreshFeeds}
+                  className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors group">
+                  <RefreshCw className="w-5 h-5 text-stone-400 group-hover:text-brand-500 transition-colors" />
+                  <span className="text-xs font-medium text-stone-600 dark:text-stone-400 group-hover:text-brand-600 dark:group-hover:text-brand-400">Refresh feeds</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ── Generic empty state ── */
+            <div>
+              <div className="w-16 h-16 bg-stone-50 dark:bg-stone-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Inbox className="w-7 h-7 text-stone-300 dark:text-stone-600" />
+              </div>
+              <h3 className="font-semibold text-stone-700 dark:text-stone-300 mb-2">{emptyTitle}</h3>
+              <p className="text-sm text-stone-400 dark:text-stone-500 max-w-xs mx-auto">{emptyBody}</p>
+              {readFilter !== 'all' && (
+                <button onClick={() => handleReadFilterChange('all')}
+                  className="mt-4 px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors">
+                  Show all articles
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

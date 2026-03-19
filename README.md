@@ -36,6 +36,9 @@ myFeedReader is a full-stack web application that aggregates RSS and Atom feeds 
 - **Stats dashboard** — Reading activity charts over time
 
 ### Infrastructure
+- **Auto-refresh on return** — Feed refreshes on app open, tab focus, and PWA resume (5-minute cooldown)
+- **Automatic storage pruning** — Read articles older than 30 days are silently deleted after every refresh; bookmarks and saved-for-later articles are never pruned
+- **Storage dashboard** — Settings → Diagnostics shows article counts, estimated usage vs free tier limit, and a manual prune button
 - **Server-side RSS fetching** — All feed fetching runs in a Supabase Edge Function; no client-side CORS issues
 - **Row Level Security** — Every query is scoped to the authenticated user at the database level
 - **Freemium model** — Free tier with feed limits; Pro tier via Paystack

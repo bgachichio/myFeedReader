@@ -3,6 +3,7 @@ import { User, Lock, Type, Calendar, Clock, Layout, Trash2, Check, Eye, EyeOff, 
 import { useAuth } from '../contexts/AuthContext'
 import { useSettings, FONTS, FONT_SIZES, DATE_FORMATS, TIME_FORMATS, TIMEZONES } from '../contexts/SettingsContext'
 import { supabase } from '../lib/supabase'
+import { pruneOldArticles, getStorageStats } from '../lib/feedsService'
 import { usePlan } from '../contexts/PlanContext'
 import PaywallModal from '../components/PaywallModal'
 
@@ -53,6 +54,78 @@ function StatusMsg({ msg }) {
     <p className={`text-xs ${isError ? 'text-red-500 dark:text-red-400' : 'text-brand-600 dark:text-brand-400'}`}>
       {msg.text}
     </p>
+  )
+}
+
+
+// ── Storage management panel ──────────────────────────────────────
+function StoragePanel() {
+  const { user } = useAuth()
+  const [stats, setStats] = useState(null)
+  const [pruning, setPruning] = useState(false)
+  const [pruned, setPruned] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    getStorageStats(user.id).then(setStats).catch(() => {})
+  }, [user])
+
+  const handlePrune = async () => {
+    if (!user) return
+    setPruning(true)
+    try {
+      await pruneOldArticles(user.id)
+      const fresh = await getStorageStats(user.id)
+      setStats(fresh)
+      setPruned(true)
+      setTimeout(() => setPruned(false), 3000)
+    } catch {}
+    finally { setPruning(false) }
+  }
+
+  if (!stats) return null
+
+  const usagePct = Math.min(100, Math.round((stats.estimatedKB / (400 * 1024)) * 100))
+  const barColour = usagePct > 75 ? 'bg-red-500' : usagePct > 50 ? 'bg-amber-500' : 'bg-brand-500'
+
+  return (
+    <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800 space-y-3">
+      <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase tracking-wide">Storage</p>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        {[
+          ['Cached articles', stats.articleCount],
+          ['Saved articles',  stats.savedCount],
+          ['Prunable',        stats.prunableCount],
+        ].map(([k, v]) => (
+          <div key={k} className="bg-stone-50 dark:bg-stone-800 rounded-lg p-2">
+            <p className="text-stone-400 dark:text-stone-500">{k}</p>
+            <p className="font-medium text-stone-700 dark:text-stone-300">{v}</p>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div className="flex justify-between text-xs text-stone-400 dark:text-stone-500 mb-1">
+          <span>Est. usage: ~{stats.estimatedKB < 1024 ? `${stats.estimatedKB} KB` : `${(stats.estimatedKB/1024).toFixed(1)} MB`}</span>
+          <span>{usagePct}% of 400 MB free tier</span>
+        </div>
+        <div className="w-full bg-stone-100 dark:bg-stone-800 rounded-full h-1.5 overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barColour}`} style={{ width: `${usagePct}%` }} />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={handlePrune} disabled={pruning || stats.prunableCount === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-40">
+          {pruning
+            ? <span className="w-3 h-3 border-2 border-stone-400 border-t-transparent rounded-full animate-spin" />
+            : <Trash2 className="w-3 h-3" />}
+          {pruning ? 'Pruning...' : `Prune ${stats.prunableCount} old article${stats.prunableCount !== 1 ? 's' : ''}`}
+        </button>
+        {pruned && <span className="text-xs text-brand-600 dark:text-brand-400">Done!</span>}
+      </div>
+      <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed">
+        Pruning removes read articles older than 30 days. Bookmarks, saved-for-later, and unread articles are never deleted. Auto-prune runs silently on every feed refresh.
+      </p>
+    </div>
   )
 }
 
@@ -181,6 +254,7 @@ function DiagnosticPanel() {
             ))}
           </div>
         )}
+        <StoragePanel />
       </div>
     </div>
   )
